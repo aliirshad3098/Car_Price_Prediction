@@ -2,57 +2,220 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load model and encoders
-model = joblib.load('car_price_model.pkl')
-brand_encoder = joblib.load('brand_encoder.pkl')
-model_encoder = joblib.load('model_encoder.pkl')
-columns = joblib.load('model_columns.pkl')
+st.set_page_config(
+    page_title="Car Price Predictor",
+    page_icon="🚗",
+    layout="wide",
+)
 
-st.title("Car Price Prediction")
-st.write("Enter the car details below to estimate its selling price.")
+# ---------------- CSS ---------------- #
+st.markdown("""
+<style>
 
-# Inputs
-brand = st.selectbox("Brand", list(brand_encoder.classes_))
+.stApp{
+    background: linear-gradient(135deg,#0f172a,#1e293b,#111827);
+    color:white;
+}
 
-car_model = st.selectbox("Model", list(model_encoder.classes_))
+.main-title{
+    text-align:center;
+    font-size:48px;
+    font-weight:700;
+    color:white;
+    margin-bottom:0;
+}
 
-car_age = st.number_input("Car Age (years)", min_value=0, max_value=30, value=5)
+.sub-title{
+    text-align:center;
+    color:#cbd5e1;
+    font-size:18px;
+    margin-bottom:35px;
+}
 
-km_driven = st.number_input("Kilometers Driven", min_value=0, max_value=400000, value=50000)
+.card{
+    background:rgba(255,255,255,.08);
+    backdrop-filter: blur(15px);
+    padding:30px;
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,.15);
+    box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
 
-fuel = st.selectbox("Fuel Type", ['Diesel', 'Petrol', 'LPG', 'CNG'])
+.result-card{
+    background:linear-gradient(135deg,#10b981,#059669);
+    padding:25px;
+    border-radius:18px;
+    text-align:center;
+    margin-top:25px;
+}
 
-seller_type = st.selectbox("Seller Type", ['Individual', 'Dealer', 'Trustmark Dealer'])
+.price{
+    font-size:45px;
+    font-weight:bold;
+    color:white;
+}
 
-transmission = st.selectbox("Transmission", ['Manual', 'Automatic'])
+.small{
+    color:#e5e7eb;
+}
 
-owner = st.selectbox("Owner", ['First Owner', 'Second Owner', 'Third Owner',
-                               'Fourth & Above Owner', 'Test Drive Car'])
+div.stButton > button{
+    width:100%;
+    height:55px;
+    border-radius:12px;
+    border:none;
+    background:linear-gradient(90deg,#2563eb,#3b82f6);
+    color:white;
+    font-size:18px;
+    font-weight:bold;
+}
 
-mileage = st.number_input("Mileage (km/l)", min_value=0.0, max_value=50.0, value=20.0)
+div.stButton > button:hover{
+    background:linear-gradient(90deg,#1d4ed8,#2563eb);
+    transform:scale(1.02);
+}
 
-engine = st.number_input("Engine (CC)", min_value=600, max_value=3500, value=1200)
+[data-testid="stMetricValue"]{
+    color:white;
+}
 
-max_power = st.number_input("Max Power (bhp)", min_value=30.0, max_value=400.0, value=80.0)
+</style>
+""", unsafe_allow_html=True)
 
-seats = st.number_input("Seats", min_value=2, max_value=10, value=5)
+# ---------------- Load Model ---------------- #
 
-# Predict
-if st.button("Predict Price"):
+model = joblib.load("car_price_model.pkl")
+brand_encoder = joblib.load("brand_encoder.pkl")
+model_encoder = joblib.load("model_encoder.pkl")
+columns = joblib.load("model_columns.pkl")
 
-    # Convert text to numbers (same mapping used during training)
-    fuel_num = {'Diesel': 0, 'Petrol': 1, 'LPG': 2, 'CNG': 3}[fuel]
-    seller_num = {'Individual': 0, 'Dealer': 1, 'Trustmark Dealer': 2}[seller_type]
-    transmission_num = {'Manual': 0, 'Automatic': 1}[transmission]
-    owner_num = {'First Owner': 1, 'Second Owner': 2, 'Third Owner': 3,
-                 'Fourth & Above Owner': 4, 'Test Drive Car': 0}[owner]
+# ---------------- Header ---------------- #
 
-    # Use the SAME encoders from training
+st.markdown("<h1 class='main-title'>🚗 Car Price Predictor</h1>", unsafe_allow_html=True)
+
+st.markdown(
+"<p class='sub-title'>Predict the estimated resale value of your vehicle using Machine Learning.</p>",
+unsafe_allow_html=True
+)
+
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    brand = st.selectbox(
+        "Brand",
+        list(brand_encoder.classes_)
+    )
+
+    car_model = st.selectbox(
+        "Model",
+        list(model_encoder.classes_)
+    )
+
+    car_age = st.slider(
+        "Car Age",
+        0,
+        30,
+        5
+    )
+
+    km_driven = st.number_input(
+        "Kilometers Driven",
+        0,
+        400000,
+        50000
+    )
+
+    fuel = st.selectbox(
+        "Fuel Type",
+        ['Diesel','Petrol','LPG','CNG']
+    )
+
+    seller_type = st.selectbox(
+        "Seller Type",
+        ['Individual','Dealer','Trustmark Dealer']
+    )
+
+with col2:
+
+    transmission = st.selectbox(
+        "Transmission",
+        ['Manual','Automatic']
+    )
+
+    owner = st.selectbox(
+        "Owner",
+        ['First Owner',
+         'Second Owner',
+         'Third Owner',
+         'Fourth & Above Owner',
+         'Test Drive Car']
+    )
+
+    mileage = st.number_input(
+        "Mileage (km/l)",
+        0.0,
+        50.0,
+        20.0
+    )
+
+    engine = st.number_input(
+        "Engine (CC)",
+        600,
+        3500,
+        1200
+    )
+
+    max_power = st.number_input(
+        "Max Power (bhp)",
+        30.0,
+        400.0,
+        80.0
+    )
+
+    seats = st.slider(
+        "Seats",
+        2,
+        10,
+        5
+    )
+
+predict = st.button("Predict Car Price")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------- Prediction ---------------- #
+
+if predict:
+
+    fuel_num = {'Diesel':0,'Petrol':1,'LPG':2,'CNG':3}[fuel]
+
+    seller_num = {
+        'Individual':0,
+        'Dealer':1,
+        'Trustmark Dealer':2
+    }[seller_type]
+
+    transmission_num = {
+        'Manual':0,
+        'Automatic':1
+    }[transmission]
+
+    owner_num = {
+        'First Owner':1,
+        'Second Owner':2,
+        'Third Owner':3,
+        'Fourth & Above Owner':4,
+        'Test Drive Car':0
+    }[owner]
+
     brand_num = brand_encoder.transform([brand])[0]
     model_num = model_encoder.transform([car_model])[0]
 
-    # Build one row in the correct column order
     new_car = pd.DataFrame([{
+
         'km_driven': km_driven,
         'fuel': fuel_num,
         'seller_type': seller_num,
@@ -65,10 +228,19 @@ if st.button("Predict Price"):
         'car_age': car_age,
         'brand': brand_num,
         'model': model_num
+
     }])
+
     new_car = new_car[columns]
 
-    price = model.predict(new_car)[0]
+    prediction = model.predict(new_car)[0]
 
-    st.success("Predicted Price: INR " + format(round(price), ","))
-    st.caption("This is an estimated price. Actual price may vary.")
+    st.markdown(f"""
+    <div class="result-card">
+        <h2>Estimated Selling Price</h2>
+        <div class="price">₹ {prediction:,.0f}</div>
+        <p class="small">
+        This value is generated using a Machine Learning model and should be considered an estimate.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
