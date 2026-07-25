@@ -255,10 +255,14 @@ if predict:
 
     price = model.predict(new_car)[0]
 
+    # INR to PKR conversion
+    inr_to_pkr = 3.35        # 1 INR ≈ 3.35 PKR
+    price_pkr = price * inr_to_pkr
+
     st.markdown(f"""
     <div class="result">
         <div class="label">Estimated Selling Price</div>
-        <div class="price">₹ {format(round(price), ",")}</div>
-        <div class="note">Based on machine learning analysis · Actual price may vary</div>
+        <div class="price">Rs {format(round(price_pkr), ",")}</div>
+        <div class="note">Converted from INR · Actual price may vary</div>
     </div>
     """, unsafe_allow_html=True)
