@@ -2,245 +2,263 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-st.set_page_config(
-    page_title="Car Price Predictor",
-    page_icon="🚗",
-    layout="wide",
-)
+# ---------- Page config ----------
+st.set_page_config(page_title="AutoValue — Car Price Estimator",
+                   page_icon="🚗", layout="wide")
 
-# ---------------- CSS ---------------- #
+# ---------- Load model & encoders ----------
+model = joblib.load('car_price_model.pkl')
+brand_encoder = joblib.load('brand_encoder.pkl')
+model_encoder = joblib.load('model_encoder.pkl')
+columns = joblib.load('model_columns.pkl')
+
+# ---------- Global CSS ----------
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
-.stApp{
-    background: linear-gradient(135deg,#0f172a,#1e293b,#111827);
-    color:white;
-}
+    /* Hide streamlit chrome */
+    #MainMenu, footer, header {visibility: hidden;}
 
-.main-title{
-    text-align:center;
-    font-size:48px;
-    font-weight:700;
-    color:white;
-    margin-bottom:0;
-}
+    .stApp {
+        background: #0a0e1a;
+        font-family: 'Inter', sans-serif;
+    }
 
-.sub-title{
-    text-align:center;
-    color:#cbd5e1;
-    font-size:18px;
-    margin-bottom:35px;
-}
+    .block-container {padding-top: 1rem; max-width: 1100px;}
 
-.card{
-    background:rgba(255,255,255,.08);
-    backdrop-filter: blur(15px);
-    padding:30px;
-    border-radius:20px;
-    border:1px solid rgba(255,255,255,.15);
-    box-shadow:0 10px 30px rgba(0,0,0,.3);
-}
+    /* ---- Hero ---- */
+    .hero {
+        position: relative;
+        background:
+            linear-gradient(135deg, rgba(10,14,26,0.85) 0%, rgba(10,14,26,0.55) 100%),
+            url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80');
+        background-size: cover;
+        background-position: center;
+        border-radius: 20px;
+        padding: 55px 45px;
+        margin-bottom: 28px;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .hero-badge {
+        display: inline-block;
+        background: rgba(99,102,241,0.15);
+        color: #a5b4fc;
+        border: 1px solid rgba(99,102,241,0.35);
+        padding: 6px 16px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 18px;
+    }
+    .hero h1 {
+        font-family: 'Poppins', sans-serif;
+        color: #ffffff;
+        font-size: 46px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0 0 12px 0;
+    }
+    .hero h1 span { color: #818cf8; }
+    .hero p {
+        color: #cbd5e1;
+        font-size: 17px;
+        max-width: 520px;
+        margin: 0;
+        line-height: 1.6;
+    }
 
-.result-card{
-    background:linear-gradient(135deg,#10b981,#059669);
-    padding:25px;
-    border-radius:18px;
-    text-align:center;
-    margin-top:25px;
-}
+    /* ---- Section card ---- */
+    .card {
+        background: #131a2e;
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 18px;
+        padding: 28px 32px;
+        margin-bottom: 22px;
+    }
+    .card-title {
+        font-family: 'Poppins', sans-serif;
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .card-sub {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 22px;
+    }
 
-.price{
-    font-size:45px;
-    font-weight:bold;
-    color:white;
-}
+    /* ---- Input labels ---- */
+    .stSelectbox label, .stNumberInput label {
+        color: #94a3b8 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
 
-.small{
-    color:#e5e7eb;
-}
+    /* Input fields */
+    .stSelectbox div[data-baseweb="select"] > div,
+    .stNumberInput div[data-baseweb="input"] > div {
+        background: #0a0e1a !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+    }
+    .stNumberInput input { color: #ffffff !important; }
 
-div.stButton > button{
-    width:100%;
-    height:55px;
-    border-radius:12px;
-    border:none;
-    background:linear-gradient(90deg,#2563eb,#3b82f6);
-    color:white;
-    font-size:18px;
-    font-weight:bold;
-}
+    /* ---- Predict button ---- */
+    div.stButton {
+        margin-top: 10px;
+    }
+    div.stButton > button {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        color: #ffffff !important;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 17px !important;
+        font-weight: 600 !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 16px 0 !important;
+        width: 100% !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        box-shadow: 0 6px 20px rgba(99,102,241,0.3) !important;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 10px 28px rgba(99,102,241,0.45) !important;
+        color: #ffffff !important;
+    }
+    div.stButton > button:active,
+    div.stButton > button:focus,
+    div.stButton > button:focus:not(:active) {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 20px rgba(99,102,241,0.35) !important;
+        outline: none !important;
+    }
 
-div.stButton > button:hover{
-    background:linear-gradient(90deg,#1d4ed8,#2563eb);
-    transform:scale(1.02);
-}
+    /* ---- Result ---- */
+    .result {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border-radius: 18px;
+        padding: 38px;
+        text-align: center;
+        margin-top: 8px;
+        box-shadow: 0 15px 40px rgba(16,185,129,0.3);
+    }
+    .result .label {
+        color: rgba(255,255,255,0.85);
+        font-size: 15px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+    .result .price {
+        font-family: 'Poppins', sans-serif;
+        color: #ffffff;
+        font-size: 52px;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1;
+    }
+    .result .note {
+        color: rgba(255,255,255,0.8);
+        font-size: 13px;
+        margin-top: 14px;
+    }
 
-[data-testid="stMetricValue"]{
-    color:white;
-}
-
+    /* Feature chips under hero */
+    .chips { display: flex; gap: 14px; margin-top: 26px; flex-wrap: wrap; }
+    .chip {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 14px 20px;
+        flex: 1;
+        min-width: 140px;
+    }
+    .chip .num {
+        font-family: 'Poppins', sans-serif;
+        color: #818cf8;
+        font-size: 22px;
+        font-weight: 700;
+    }
+    .chip .txt { color: #94a3b8; font-size: 13px; margin-top: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Load Model ---------------- #
+# ---------- Hero ----------
+st.markdown("""
+<div class="hero">
+    <div class="hero-badge">⚡ AI-POWERED VALUATION</div>
+    <h1>Know your car's<br><span>true market value</span></h1>
+    <p>Enter your vehicle details and our machine learning model
+       instantly estimates a fair selling price based on thousands of real listings.</p>
+</div>
+""", unsafe_allow_html=True)
 
-model = joblib.load("car_price_model.pkl")
-brand_encoder = joblib.load("brand_encoder.pkl")
-model_encoder = joblib.load("model_encoder.pkl")
-columns = joblib.load("model_columns.pkl")
+# ---------- Input card ----------
+st.markdown('<div class="card"><div class="card-title">Vehicle Details</div>'
+            '<div class="card-sub">Fill in the details below for an accurate estimate</div>',
+            unsafe_allow_html=True)
 
-# ---------------- Header ---------------- #
+c1, c2, c3 = st.columns(3)
 
-st.markdown("<h1 class='main-title'>🚗 Car Price Predictor</h1>", unsafe_allow_html=True)
+with c1:
+    brand = st.selectbox("Brand", list(brand_encoder.classes_))
+    fuel = st.selectbox("Fuel Type", ['Diesel', 'Petrol', 'LPG', 'CNG'])
+    car_age = st.number_input("Car Age (years)", 0, 30, 5)
+    engine = st.number_input("Engine (CC)", 600, 3500, 1200)
 
-st.markdown(
-"<p class='sub-title'>Predict the estimated resale value of your vehicle using Machine Learning.</p>",
-unsafe_allow_html=True
-)
+with c2:
+    car_model = st.selectbox("Model", list(model_encoder.classes_))
+    transmission = st.selectbox("Transmission", ['Manual', 'Automatic'])
+    km_driven = st.number_input("Kilometers Driven", 0, 400000, 50000)
+    max_power = st.number_input("Max Power (bhp)", 30.0, 400.0, 80.0)
 
-st.markdown("<div class='card'>", unsafe_allow_html=True)
+with c3:
+    seller_type = st.selectbox("Seller Type", ['Individual', 'Dealer', 'Trustmark Dealer'])
+    owner = st.selectbox("Owner", ['First Owner', 'Second Owner', 'Third Owner',
+                                   'Fourth & Above Owner', 'Test Drive Car'])
+    mileage = st.number_input("Mileage (km/l)", 0.0, 50.0, 20.0)
+    seats = st.number_input("Seats", 2, 10, 5)
 
-col1, col2 = st.columns(2)
+st.markdown('</div>', unsafe_allow_html=True)
 
-with col1:
-
-    brand = st.selectbox(
-        "Brand",
-        list(brand_encoder.classes_)
-    )
-
-    car_model = st.selectbox(
-        "Model",
-        list(model_encoder.classes_)
-    )
-
-    car_age = st.slider(
-        "Car Age",
-        0,
-        30,
-        5
-    )
-
-    km_driven = st.number_input(
-        "Kilometers Driven",
-        0,
-        400000,
-        50000
-    )
-
-    fuel = st.selectbox(
-        "Fuel Type",
-        ['Diesel','Petrol','LPG','CNG']
-    )
-
-    seller_type = st.selectbox(
-        "Seller Type",
-        ['Individual','Dealer','Trustmark Dealer']
-    )
-
-with col2:
-
-    transmission = st.selectbox(
-        "Transmission",
-        ['Manual','Automatic']
-    )
-
-    owner = st.selectbox(
-        "Owner",
-        ['First Owner',
-         'Second Owner',
-         'Third Owner',
-         'Fourth & Above Owner',
-         'Test Drive Car']
-    )
-
-    mileage = st.number_input(
-        "Mileage (km/l)",
-        0.0,
-        50.0,
-        20.0
-    )
-
-    engine = st.number_input(
-        "Engine (CC)",
-        600,
-        3500,
-        1200
-    )
-
-    max_power = st.number_input(
-        "Max Power (bhp)",
-        30.0,
-        400.0,
-        80.0
-    )
-
-    seats = st.slider(
-        "Seats",
-        2,
-        10,
-        5
-    )
-
-predict = st.button("Predict Car Price")
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------- Prediction ---------------- #
+# ---------- Predict ----------
+predict = st.button("Estimate Price  →", use_container_width=True)
 
 if predict:
-
-    fuel_num = {'Diesel':0,'Petrol':1,'LPG':2,'CNG':3}[fuel]
-
-    seller_num = {
-        'Individual':0,
-        'Dealer':1,
-        'Trustmark Dealer':2
-    }[seller_type]
-
-    transmission_num = {
-        'Manual':0,
-        'Automatic':1
-    }[transmission]
-
-    owner_num = {
-        'First Owner':1,
-        'Second Owner':2,
-        'Third Owner':3,
-        'Fourth & Above Owner':4,
-        'Test Drive Car':0
-    }[owner]
+    fuel_num = {'Diesel': 0, 'Petrol': 1, 'LPG': 2, 'CNG': 3}[fuel]
+    seller_num = {'Individual': 0, 'Dealer': 1, 'Trustmark Dealer': 2}[seller_type]
+    transmission_num = {'Manual': 0, 'Automatic': 1}[transmission]
+    owner_num = {'First Owner': 1, 'Second Owner': 2, 'Third Owner': 3,
+                 'Fourth & Above Owner': 4, 'Test Drive Car': 0}[owner]
 
     brand_num = brand_encoder.transform([brand])[0]
     model_num = model_encoder.transform([car_model])[0]
 
     new_car = pd.DataFrame([{
-
-        'km_driven': km_driven,
-        'fuel': fuel_num,
-        'seller_type': seller_num,
-        'transmission': transmission_num,
-        'owner': owner_num,
-        'mileage': mileage,
-        'engine': engine,
-        'max_power': max_power,
-        'seats': seats,
-        'car_age': car_age,
-        'brand': brand_num,
-        'model': model_num
-
+        'km_driven': km_driven, 'fuel': fuel_num, 'seller_type': seller_num,
+        'transmission': transmission_num, 'owner': owner_num, 'mileage': mileage,
+        'engine': engine, 'max_power': max_power, 'seats': seats,
+        'car_age': car_age, 'brand': brand_num, 'model': model_num
     }])
-
     new_car = new_car[columns]
 
-    prediction = model.predict(new_car)[0]
+    price = model.predict(new_car)[0]
 
     st.markdown(f"""
-    <div class="result-card">
-        <h2>Estimated Selling Price</h2>
-        <div class="price">₹ {prediction:,.0f}</div>
-        <p class="small">
-        This value is generated using a Machine Learning model and should be considered an estimate.
-        </p>
+    <div class="result">
+        <div class="label">Estimated Selling Price</div>
+        <div class="price">₹ {format(round(price), ",")}</div>
+        <div class="note">Based on machine learning analysis · Actual price may vary</div>
     </div>
     """, unsafe_allow_html=True)
